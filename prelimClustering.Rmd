@@ -1,0 +1,121 @@
+---
+title: "School Board Cluster"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, comment = "", fig.align = "center", fig.width = 9, fig.height = 9)
+
+library(dplyr)
+
+library(factoextra)
+
+load("clustering.RData")
+```
+
+
+## Visualizing Correlations
+
+```{r}
+clusterData %>% 
+  select(-school_district, -sale_price, -LRSN) %>% 
+  na.omit() %>% 
+  cor() %>% 
+  ggcorrplot::ggcorrplot(., hc.order = TRUE,
+                         outline.col = "white",
+                         ggtheme = ggplot2::theme_minimal,
+                         colors = c("#6D9EC1", "white", "#E46726"))
+```
+
+For the sake of producing tidier clusters, we are going to drop a few highly-correlated variables. 
+
+## Medoids By School District
+
+As a first pass, the 2017 data was split based upon school district. Data within each school distict was then partitioned into 4 clusters. 
+
+### Cluster Quality
+
+```{r}
+data.frame(schoolDistrict = c("JG", "MSC", "NPU", "PHM", "SBCSC", "UNU" ), 
+           averageSilhouetteWidth = c(clusNumTest$JG$silinfo$avg.width, 
+                                      clusNumTest$MSC$silinfo$avg.width, 
+                                      clusNumTest$NPU$silinfo$avg.width, 
+                                      clusNumTest$PHM$silinfo$avg.width, 
+                                      clusNumTest$SBCSC$silinfo$avg.width, 
+                                      clusNumTest$UNU$silinfo$avg.width)) %>% 
+  knitr::kable()
+```
+
+
+### John Glenn
+
+```{r}
+clusNumTest$JG$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$JG, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+### Mishawaka
+
+```{r}
+clusNumTest$MSC$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$MSC, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+### New Prairie United
+
+```{r}
+clusNumTest$NPU$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$NPU, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+### Penn-Harris-Madison
+
+```{r}
+clusNumTest$PHM$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$PHM, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+### South Bend 
+
+```{r}
+clusNumTest$SBCSC$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$SBCSC, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+### Union-North United
+
+```{r}
+clusNumTest$UNU$medoids %>% knitr::kable(.)
+
+fviz_cluster(clusNumTest$UNU, geom = "point", ellipse.type = "norm",
+             palette = "jco", ggtheme = theme_minimal())
+```
+
+
+
+## Sales By School District And Cluster
+
+```{r}
+clusterAssignmentData %>% 
+  mutate(saleNY = ifelse(is.na(sale_price), 0, 1)) %>% 
+  group_by(school_district, clusterAssignment) %>% 
+  summarize(totalProperties = n(), 
+            sold = sum(saleNY)) %>% 
+  DT::datatable(.)
+```
+
