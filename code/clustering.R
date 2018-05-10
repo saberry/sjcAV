@@ -94,4 +94,8 @@ clusterAssignment = clusterData %>%
 
 clusterAssignmentData = left_join(clusterData, clusterAssignment, by = "LRSN")
 
+avDat = dat2017 %>% select(LRSN, total_AV_roll)
+
+clusterAssignmentData = left_join(clusterAssignmentData, avDat, by = "LRSN")
+
 save(clusNumTest, clusterData, clusterAssignmentData, file = "clustering.RData")

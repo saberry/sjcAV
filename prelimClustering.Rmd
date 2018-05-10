@@ -115,7 +115,12 @@ clusterAssignmentData %>%
   mutate(saleNY = ifelse(is.na(sale_price), 0, 1)) %>% 
   group_by(school_district, clusterAssignment) %>% 
   summarize(totalProperties = n(), 
-            sold = sum(saleNY)) %>% 
+            sold = as.integer(sum(saleNY)), 
+            averageSalePrice = round(mean(sale_price, na.rm = TRUE)), 
+            averageAV = round(mean(total_AV_roll, na.rm = TRUE))) %>% 
+  mutate(percSold = round(sold / totalProperties, 3)) %>% 
+  select(school_district, clusterAssignment, totalProperties, sold, 
+         percSold, averageAV, averageSalePrice) %>% 
   DT::datatable(.)
 ```
 
