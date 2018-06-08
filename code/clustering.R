@@ -8,7 +8,7 @@ library(mclust)
 
 library(factoextra)
 
-dat2017 = readxl::read_excel("data/20180411_flat_2017.xlsx")
+dat2017 = readxl::read_excel("data/_flat_2017.xlsx")
 
 dat2017$conditionNum = NA
 
@@ -64,7 +64,47 @@ clusNums = clusterData %>%
   na.omit() %>% 
   split(.$school_district) %>% 
   purrr::map(~eclust(.[!(names(.) %in% "school_district")], FUNcluster = "clara",
-                     k.max = 6))
+                     k.max = 8))
+
+clusterData %>% 
+  dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+                -LRSN, -centralBinary) %>% 
+  na.omit() %>% 
+  filter(school_district == "") %>%
+  purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "silhouette"))
+
+
+silTest = clusterData %>% 
+  dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+                -LRSN, -centralBinary) %>% 
+  na.omit() %>% 
+  split(.$school_district) %>%
+  purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "silhouette"))
+
+gapTest = clusterData %>% 
+  dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+                -LRSN, -centralBinary) %>% 
+  na.omit() %>% 
+  split(.$school_district) %>%
+  purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "gap_stat", 
+                           nboot = 10, k.max = 8))
+
+elbowTest = clusterData %>% 
+  dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+                -LRSN, -centralBinary) %>% 
+  na.omit() %>% 
+  split(.$school_district) %>%
+  purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "wss", 
+                           k.max = 8))
+
+
+bigTest = clusterData %>% 
+  dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+                -LRSN, -centralBinary) %>% 
+  na.omit() %>% 
+  split(.$school_district) %>%
+  purrr::map(~NbClust(.[!(names(.) %in% "school_district")], method = "centroid", 
+                           max.nc = 8, min.nc = 2, index = "all"))
 
 splitCluster = clusterData %>% 
   select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
@@ -73,7 +113,7 @@ splitCluster = clusterData %>%
   split(.$school_district)
 
 clusNumTest = purrr::map2(splitCluster,
-                          list(4, 4, 4, 4, 4, 4), 
+                          list(2, 2, 7, 2, 2, 2), 
                           ~clara(.x[!(names(.) %in% "school_district")], k = .y))
 
 
