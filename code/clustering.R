@@ -35,7 +35,7 @@ clusterData = dat2017 %>%
          year_built = ifelse(year_built < 1000, 
                              year_built + 1000, year_built)) %>% 
   select(acreage, effective_front_feet, year_built, base_parcel_area, conditionNum,
-         finished_dwelling_area, bedrooms, finished_rooms, bathrooms, grade, centralBinary,
+         finished_dwelling_area, bedrooms, finished_rooms, bathrooms, grade,
          school_district, sale_price, LRSN)
 
 clusterData %>% 
@@ -108,20 +108,17 @@ bigTest = clusterData %>%
 
 splitCluster = clusterData %>% 
   select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-         -LRSN, -centralBinary) %>% 
+         -LRSN) %>% 
   na.omit() %>% 
   split(.$school_district)
 
 clusNumTest = purrr::map2(splitCluster,
-                          list(2, 2, 7, 2, 2, 2), 
+                          list(2, 7, 3, 7, 7, 2), 
                           ~clara(.x[!(names(.) %in% "school_district")], k = .y))
 
 
-
-
 clusterAssignment = clusterData %>% 
-  select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-         -centralBinary) %>% 
+  select(-base_parcel_area, -grade, -finished_rooms, -sale_price) %>% 
   na.omit() %>% 
   arrange(school_district) %>% 
   mutate(clusterAssignment = c(unlist(clusNumTest$JG$clustering), 
