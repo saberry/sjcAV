@@ -1,3 +1,11 @@
+# NOTE TO SETH #
+# Cluster the big 3 school districts by township
+
+# For Mishawaka, try to split between north and south of the river.
+
+# Identify wacky values for further investigation.
+
+
 library(dplyr)
 
 library(cluster)

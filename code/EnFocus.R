@@ -1,5 +1,5 @@
 library(dplyr)
-library(plyr)
+# library(plyr)
 library(ggplot2)
 library(lme4)
 
@@ -7,9 +7,13 @@ library(lme4)
 
 # Flat2017 = readxl::read_xlsx(path = "G:/My Drive/Research/Projects/EnFocus/Shared with Jack/20180601_flat_files/_flat_2017.xlsx")
 
+saleData = readxl::read_excel("data/Copy of 2013-2017 SJC Ratio Study Residentioal Sales used.xlsx", sheet = "2017-2018")
+
 Flat2017 = readxl::read_excel("data/_flat_2017.xlsx")
 
 load("clustering.RData")
+
+Flat2017 = left_join(Flat2017, saleData, by = c("PARCELSTAT" = "Parcel Number"))
 
 clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 
@@ -20,7 +24,6 @@ saleCoef = Flat2017 %>%
   mutate() %>% 
   lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .) %>% 
   coef()
-
 
 salesOnly = Flat2017 %>% 
   filter(!is.na(sale_price)) %>% 
@@ -40,48 +43,44 @@ trueCOD = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$m
 districtCoefs = salesOnly %>% 
   split(., .$schoolCluster) %>% 
   purrr::map(~lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
-  purrr::map(~coef(.)) %>% 
-  purrr::map(~dplyr::mutate(newAssessedValue = ))
+  purrr::map(~coef(.))
   
-salesOnly %>% 
-  split(., .$school_district) %>% 
-  map(~unique(.$schoolCluster))
-  lapply()
-  purrr::map(~dplyr::mutate((land_AV_preRoll * districtCoefs[[]]["land_AV_preRoll"]) + 
-                              (improvement_AV_preRoll * districtCoefs[[]]["improvement_AV_preRoll"])))
+splitStuff = salesOnly %>% 
+  split(., .$schoolCluster)
 
+salesOnly = map2_df(splitStuff, districtCoefs, ~ mutate(., newAssessedValueTest = (.$land_AV_preRoll * .y["land_AV_preRoll"]) + 
+                                        (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
 
-salesOnly$newAssessedValueTest[salesOnly$school_district == "JG"] = (salesOnly$land_AV_preRoll * districtCoefs$JG["land_AV_preRoll"]) + 
-           (salesOnly$improvement_AV_preRoll * districtCoefs$JG["improvement_AV_preRoll"])
-
-salesOnly$newAssessedValueTest[salesOnly$school_district == "MSC"] = (salesOnly$land_AV_preRoll * districtCoefs$MSC["land_AV_preRoll"]) + 
-  (salesOnly$improvement_AV_preRoll * districtCoefs$MSC["improvement_AV_preRoll"])
-
-salesOnly$newAssessedValueTest[salesOnly$school_district == "NPU"] = (salesOnly$land_AV_preRoll * districtCoefs$NPU["land_AV_preRoll"]) + 
-  (salesOnly$improvement_AV_preRoll * districtCoefs$NPU["improvement_AV_preRoll"])
-
-salesOnly$newAssessedValueTest[salesOnly$school_district == "PHM"] = (salesOnly$land_AV_preRoll * districtCoefs$PHM["land_AV_preRoll"]) + 
-  (salesOnly$improvement_AV_preRoll * districtCoefs$PHM["improvement_AV_preRoll"])
-
-salesOnly$newAssessedValueTest[salesOnly$school_district == "SBCSC"] = (salesOnly$land_AV_preRoll * districtCoefs$SBCSC["land_AV_preRoll"]) + 
-  (salesOnly$improvement_AV_preRoll * districtCoefs$SBCSC["improvement_AV_preRoll"])
-
-salesOnly$newAssessedValueTest[salesOnly$school_district == "UNU"] = (salesOnly$land_AV_preRoll * districtCoefs$UNU["land_AV_preRoll"]) + 
-  (salesOnly$improvement_AV_preRoll * districtCoefs$UNU["improvement_AV_preRoll"])
+# salesOnly$newAssessedValueTestV2[salesOnly$schoolCluster == "JG_1"] = (salesOnly$land_AV_preRoll[salesOnly$schoolCluster == "JG_1"] * districtCoefs$JG_1["land_AV_preRoll"]) + 
+#            (salesOnly$improvement_AV_preRoll[salesOnly$schoolCluster == "JG_1"] * districtCoefs$JG_1["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTestV2[salesOnly$schoolCluster == "JG_2"] = (salesOnly$land_AV_preRoll[salesOnly$schoolCluster == "JG_2"] * districtCoefs$JG_2["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll[salesOnly$schoolCluster == "JG_2"] * districtCoefs$JG_2["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTest[salesOnly$school_district == "MSC"] = (salesOnly$land_AV_preRoll * districtCoefs$MSC["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll * districtCoefs$MSC["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTest[salesOnly$school_district == "NPU"] = (salesOnly$land_AV_preRoll * districtCoefs$NPU["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll * districtCoefs$NPU["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTest[salesOnly$school_district == "PHM"] = (salesOnly$land_AV_preRoll * districtCoefs$PHM["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll * districtCoefs$PHM["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTest[salesOnly$school_district == "SBCSC"] = (salesOnly$land_AV_preRoll * districtCoefs$SBCSC["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll * districtCoefs$SBCSC["improvement_AV_preRoll"])
+# 
+# salesOnly$newAssessedValueTest[salesOnly$school_district == "UNU"] = (salesOnly$land_AV_preRoll * districtCoefs$UNU["land_AV_preRoll"]) + 
+#   (salesOnly$improvement_AV_preRoll * districtCoefs$UNU["improvement_AV_preRoll"])
 
 
 salesOnly = salesOnly %>% 
-  mutate(newAssessedValueTest = (land_AV_preRoll * saleCoef["land_AV_preRoll"]) + 
-         (improvement_AV_preRoll * saleCoef["improvement_AV_preRoll"]), 
-       saleAssessedDiff = sale_price - newAssessedValueTest, 
+  mutate(saleAssessedDiff = sale_price - newAssessedValueTest, 
        saleAssessedDiffPerc = (sale_price - newAssessedValueTest) / sale_price, 
        ratio = newAssessedValueTest / sale_price, 
        medianRatio = median(ratio), 
        dispersion = ratio - medianRatio)
 
 trueCOD = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
-
-
 
 # Mixed Model Test
 
