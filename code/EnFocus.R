@@ -35,10 +35,11 @@ salesOnly = Flat2017 %>%
          medianRatio = median(ratio), 
          dispersion = ratio - medianRatio)
 
-salesOnly = salesOnly %>% 
-  tidyr::unite(schoolCluster, school_district, clusterAssignment, remove = FALSE)
-  
-trueCOD = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
+trueCODRaw = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
+
+salesOnly = salesOnly[which(!is.na(salesOnly$clusterAssignment)), ] %>% 
+  tidyr::unite(schoolCluster, school_district, clusterAssignment, remove = FALSE) %>% 
+  tidyr::unite(schoolTownCluster, schoolDistrictTownship, clusterAssignment2, remove = FALSE)
 
 districtCoefs = salesOnly %>% 
   split(., .$schoolCluster) %>% 
@@ -51,28 +52,6 @@ splitStuff = salesOnly %>%
 salesOnly = map2_df(splitStuff, districtCoefs, ~ mutate(., newAssessedValueTest = (.$land_AV_preRoll * .y["land_AV_preRoll"]) + 
                                         (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
 
-# salesOnly$newAssessedValueTestV2[salesOnly$schoolCluster == "JG_1"] = (salesOnly$land_AV_preRoll[salesOnly$schoolCluster == "JG_1"] * districtCoefs$JG_1["land_AV_preRoll"]) + 
-#            (salesOnly$improvement_AV_preRoll[salesOnly$schoolCluster == "JG_1"] * districtCoefs$JG_1["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTestV2[salesOnly$schoolCluster == "JG_2"] = (salesOnly$land_AV_preRoll[salesOnly$schoolCluster == "JG_2"] * districtCoefs$JG_2["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll[salesOnly$schoolCluster == "JG_2"] * districtCoefs$JG_2["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTest[salesOnly$school_district == "MSC"] = (salesOnly$land_AV_preRoll * districtCoefs$MSC["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll * districtCoefs$MSC["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTest[salesOnly$school_district == "NPU"] = (salesOnly$land_AV_preRoll * districtCoefs$NPU["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll * districtCoefs$NPU["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTest[salesOnly$school_district == "PHM"] = (salesOnly$land_AV_preRoll * districtCoefs$PHM["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll * districtCoefs$PHM["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTest[salesOnly$school_district == "SBCSC"] = (salesOnly$land_AV_preRoll * districtCoefs$SBCSC["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll * districtCoefs$SBCSC["improvement_AV_preRoll"])
-# 
-# salesOnly$newAssessedValueTest[salesOnly$school_district == "UNU"] = (salesOnly$land_AV_preRoll * districtCoefs$UNU["land_AV_preRoll"]) + 
-#   (salesOnly$improvement_AV_preRoll * districtCoefs$UNU["improvement_AV_preRoll"])
-
-
 salesOnly = salesOnly %>% 
   mutate(saleAssessedDiff = sale_price - newAssessedValueTest, 
        saleAssessedDiffPerc = (sale_price - newAssessedValueTest) / sale_price, 
@@ -80,7 +59,33 @@ salesOnly = salesOnly %>%
        medianRatio = median(ratio), 
        dispersion = ratio - medianRatio)
 
-trueCOD = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
+trueCODSchool = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
+
+districtTownCoefs = salesOnly %>% 
+  split(., .$schoolTownCluster) %>% 
+  purrr::map(~lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
+  purrr::map(~coef(.))
+
+splitStuffTown = salesOnly %>% 
+  split(., .$schoolTownCluster)
+
+salesOnly = map2_df(splitStuffTown, districtTownCoefs, 
+                    ~ mutate(., newAssessedValueSDTown = (.$land_AV_preRoll * .y["land_AV_preRoll"]) + 
+                                                          (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
+
+salesOnly = salesOnly %>% 
+  mutate(saleAssessedDiffTown = sale_price - newAssessedValueSDTown, 
+         saleAssessedDiffPercTown = (sale_price - newAssessedValueSDTown) / sale_price, 
+         ratioTown = newAssessedValueSDTown / sale_price, 
+         medianRatio = median(ratio), 
+         dispersion = ratio - medianRatio)
+
+trueCODSchoolTown = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
+
+
+
+
+
 
 # Mixed Model Test
 

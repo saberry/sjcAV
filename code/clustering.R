@@ -44,10 +44,16 @@ clusterData = dat2017 %>%
                              year_built + 1000, year_built)) %>% 
   select(acreage, effective_front_feet, year_built, base_parcel_area, conditionNum,
          finished_dwelling_area, bedrooms, finished_rooms, bathrooms, grade,
-         school_district, sale_price, LRSN)
+         school_district, township, sale_price, LRSN)
+
+clusterData$schoolDistrictTownship = NA
+
+clusterData$schoolDistrictTownship = ifelse(grepl("MSC|PHM|SBCSC", clusterData$school_district), 
+                                            paste(clusterData$school_district, clusterData$township, sep = "_"), 
+                                            clusterData$school_district)
 
 clusterData %>% 
-  select(-school_district, -sale_price, -LRSN) %>% 
+  select(-school_district, -sale_price, -LRSN, -township) %>% 
   na.omit() %>% 
   cor() %>% 
   ggcorrplot::ggcorrplot(., hc.order = TRUE,
@@ -68,7 +74,7 @@ clusterData %>%
 
 clusNums = clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   split(.$school_district) %>% 
   purrr::map(~eclust(.[!(names(.) %in% "school_district")], FUNcluster = "clara",
@@ -76,7 +82,7 @@ clusNums = clusterData %>%
 
 clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   filter(school_district == "") %>%
   purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "silhouette"))
@@ -84,14 +90,14 @@ clusterData %>%
 
 silTest = clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   split(.$school_district) %>%
   purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "silhouette"))
 
 gapTest = clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   split(.$school_district) %>%
   purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "gap_stat", 
@@ -99,7 +105,7 @@ gapTest = clusterData %>%
 
 elbowTest = clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   split(.$school_district) %>%
   purrr::map(~fviz_nbclust(.[!(names(.) %in% "school_district")], clara, method = "wss", 
@@ -108,7 +114,7 @@ elbowTest = clusterData %>%
 
 bigTest = clusterData %>% 
   dplyr::select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-                -LRSN, -centralBinary) %>% 
+                -LRSN, -centralBinary, -township) %>% 
   na.omit() %>% 
   split(.$school_district) %>%
   purrr::map(~NbClust(.[!(names(.) %in% "school_district")], method = "centroid", 
@@ -116,7 +122,7 @@ bigTest = clusterData %>%
 
 splitCluster = clusterData %>% 
   select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
-         -LRSN) %>% 
+         -LRSN, -township) %>% 
   na.omit() %>% 
   split(.$school_district)
 
@@ -125,8 +131,19 @@ clusNumTest = purrr::map2(splitCluster,
                           ~clara(.x[!(names(.) %in% "school_district")], k = .y))
 
 
+splitCluster2 = clusterData %>% 
+  select(-base_parcel_area, -grade, -finished_rooms, -sale_price, 
+         -LRSN, -township) %>% 
+  na.omit() %>% 
+  split(.$schoolDistrictTownship)
+
+clusNumTest2 = purrr::map2(splitCluster2,
+                          list(3, 7, 3, 5, 3, 5, 5, 5, 5, 4, 5, 4, 3), 
+                          ~clara(.x[!(names(.) %in% "school_district")], k = .y))
+
+
 clusterAssignment = clusterData %>% 
-  select(-base_parcel_area, -grade, -finished_rooms, -sale_price) %>% 
+  select(-base_parcel_area, -grade, -finished_rooms, -sale_price, -township) %>% 
   na.omit() %>% 
   arrange(school_district) %>% 
   mutate(clusterAssignment = c(unlist(clusNumTest$JG$clustering), 
@@ -134,8 +151,21 @@ clusterAssignment = clusterData %>%
                                unlist(clusNumTest$NPU$clustering), 
                                unlist(clusNumTest$PHM$clustering), 
                                unlist(clusNumTest$SBCSC$clustering), 
-                               unlist(clusNumTest$UNU$clustering))) %>% 
-  select(LRSN, clusterAssignment)
+                               unlist(clusNumTest$UNU$clustering)), 
+         clusterAssignment2 = c(unlist(clusNumTest2$JG$clustering), 
+                                unlist(clusNumTest2$MSC_010$clustering), 
+                                unlist(clusNumTest2$NPU$clustering), 
+                                unlist(clusNumTest2$PHM_005$clustering), 
+                                unlist(clusNumTest2$PHM_008$clustering), 
+                                unlist(clusNumTest2$PHM_010$clustering), 
+                                unlist(clusNumTest2$SBCSC_001$clustering), 
+                                unlist(clusNumTest2$SBCSC_002$clustering), 
+                                unlist(clusNumTest2$SBCSC_003$clustering), 
+                                unlist(clusNumTest2$SBCSC_004$clustering), 
+                                unlist(clusNumTest2$SBCSC_011$clustering), 
+                                unlist(clusNumTest2$SBCSC_013$clustering), 
+                                unlist(clusNumTest2$UNU$clustering))) %>% 
+  select(LRSN, clusterAssignment, clusterAssignment2)
 
 clusterAssignmentData = left_join(clusterData, clusterAssignment, by = "LRSN")
 
