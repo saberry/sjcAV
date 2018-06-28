@@ -20,18 +20,18 @@ clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 Flat2017 = left_join(Flat2017, clusterAssignmentData)
 
 saleCoef = Flat2017 %>% 
-  filter(!is.na(sale_price)) %>% 
+  filter(!is.na(`Sale Price`)) %>% 
   mutate() %>% 
-  lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .) %>% 
+  lm(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .) %>% 
   coef()
 
 salesOnly = Flat2017 %>% 
-  filter(!is.na(sale_price)) %>% 
+  filter(!is.na(`Sale Price`)) %>% 
   mutate(newAssessedValue = (land_AV_preRoll * saleCoef["land_AV_preRoll"]) + 
            (improvement_AV_preRoll * saleCoef["improvement_AV_preRoll"]), 
-         saleAssessedDiff = sale_price - newAssessedValue, 
-         saleAssessedDiffPerc = (sale_price - newAssessedValue) / sale_price, 
-         ratio = newAssessedValue / sale_price, 
+         saleAssessedDiff = `Sale Price` - newAssessedValue, 
+         saleAssessedDiffPerc = (`Sale Price` - newAssessedValue) / `Sale Price`, 
+         ratio = newAssessedValue / `Sale Price`, 
          medianRatio = median(ratio), 
          dispersion = ratio - medianRatio)
 
@@ -43,7 +43,7 @@ salesOnly = salesOnly[which(!is.na(salesOnly$clusterAssignment)), ] %>%
 
 districtCoefs = salesOnly %>% 
   split(., .$schoolCluster) %>% 
-  purrr::map(~lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
+  purrr::map(~lm(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
   purrr::map(~coef(.))
   
 splitStuff = salesOnly %>% 
@@ -53,9 +53,9 @@ salesOnly = map2_df(splitStuff, districtCoefs, ~ mutate(., newAssessedValueTest 
                                         (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
 
 salesOnly = salesOnly %>% 
-  mutate(saleAssessedDiff = sale_price - newAssessedValueTest, 
-       saleAssessedDiffPerc = (sale_price - newAssessedValueTest) / sale_price, 
-       ratio = newAssessedValueTest / sale_price, 
+  mutate(saleAssessedDiff = `Sale Price` - newAssessedValueTest, 
+       saleAssessedDiffPerc = (`Sale Price` - newAssessedValueTest) / `Sale Price`, 
+       ratio = newAssessedValueTest / `Sale Price`, 
        medianRatio = median(ratio), 
        dispersion = ratio - medianRatio)
 
@@ -63,7 +63,7 @@ trueCODSchool = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / sales
 
 districtTownCoefs = salesOnly %>% 
   split(., .$schoolTownCluster) %>% 
-  purrr::map(~lm(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
+  purrr::map(~lm(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
   purrr::map(~coef(.))
 
 splitStuffTown = salesOnly %>% 
@@ -74,22 +74,17 @@ salesOnly = map2_df(splitStuffTown, districtTownCoefs,
                                                           (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
 
 salesOnly = salesOnly %>% 
-  mutate(saleAssessedDiffTown = sale_price - newAssessedValueSDTown, 
-         saleAssessedDiffPercTown = (sale_price - newAssessedValueSDTown) / sale_price, 
-         ratioTown = newAssessedValueSDTown / sale_price, 
-         medianRatio = median(ratio), 
-         dispersion = ratio - medianRatio)
+  mutate(saleAssessedDiffTown = `Sale Price` - newAssessedValueSDTown, 
+         saleAssessedDiffPercTown = (`Sale Price` - newAssessedValueSDTown) / `Sale Price`, 
+         ratioTown = newAssessedValueSDTown / `Sale Price`, 
+         medianRatio = median(ratioTown, na.rm = TRUE), 
+         dispersion = ratioTown - medianRatio)
 
-trueCODSchoolTown = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion))) / salesOnly$medianRatio[1]
-
-
-
-
-
+trueCODSchoolTown = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion), na.rm = TRUE)) / salesOnly$medianRatio[1]
 
 # Mixed Model Test
 
-mixedModTest = lmer(sale_price ~ land_AV_preRoll + improvement_AV_preRoll -1 + (1|schoolCluster), data = salesOnly)
+mixedModTest = lmer(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1 + (1|schoolTownCluster), data = salesOnly)
 
 
 
