@@ -13,7 +13,13 @@ Flat2017 = readxl::read_excel("data/_flat_2017.xlsx")
 
 load("clustering.RData")
 
-Flat2017 = left_join(Flat2017, saleData, by = c("PARCELSTAT" = "Parcel Number"))
+load("data/sjcShapeTract.RData")
+
+shapeSmall = sjcShape %>% 
+  select(PARCELSTAT, tract)
+
+Flat2017 = left_join(Flat2017, saleData, by = c("PARCELSTAT" = "Parcel Number")) %>% 
+  left_join(., shapeSmall, by = "PARCELSTAT")
 
 clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 
@@ -81,6 +87,32 @@ salesOnly = salesOnly %>%
          dispersion = ratioTown - medianRatio)
 
 trueCODSchoolTown = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion), na.rm = TRUE)) / salesOnly$medianRatio[1]
+
+
+# Tax District
+
+tractCoefs = salesOnly %>% 
+  split(., .$tract) %>% 
+  purrr::map(~lm(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .x)) %>% 
+  purrr::map(~coef(.))
+
+splitTract = salesOnly %>% 
+  split(., .$tract)
+
+salesOnly = map2_df(splitTract, tractCoefs, 
+                    ~ mutate(., newAssessedValueTract = (.$land_AV_preRoll * .y["land_AV_preRoll"]) + 
+                               (.$improvement_AV_preRoll * .y["improvement_AV_preRoll"])))
+
+salesOnly = salesOnly %>% 
+  mutate(saleAssessedDiffTract = `Sale Price` - newAssessedValueTract, 
+         saleAssessedDiffPercTract = (`Sale Price` - newAssessedValueTract) / `Sale Price`, 
+         ratioTract = newAssessedValueTract / `Sale Price`, 
+         medianRatio = median(ratioTract, na.rm = TRUE), 
+         dispersion = ratioTract - medianRatio)
+
+trueCODTract = ((100/nrow(salesOnly)) * sum(abs(salesOnly$dispersion), na.rm = TRUE)) / salesOnly$medianRatio[1]
+
+
 
 # Mixed Model Test
 
