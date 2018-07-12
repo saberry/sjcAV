@@ -1,12 +1,12 @@
-testFunc = function(salesOnly, subVar, subVar2 = NULL) {
+testFunc = function(salesOnly, minSale, subVar, subVar2 = NULL) {
   
   library(dplyr)
   
   library(purrr)
   
-  if(!(is.null(subVar2))) {
+  if(is_empty(subVar2) == FALSE) {
     newName = paste(subVar, subVar2, sep = "_")
-    salesOnly[, newName] = paste(salesOnly[, subVar], salesOnly[, subVar2], sep = "_")
+    salesOnly[, newName] = paste(salesOnly[, subVar][[1]], salesOnly[, subVar2][[1]], sep = "_")
     subVar = newName
   }
   
@@ -15,7 +15,7 @@ testFunc = function(salesOnly, subVar, subVar2 = NULL) {
   counts = salesOnly %>% 
     group_by_at(vars(one_of(subVar))) %>% 
     summarize_(stuff = ~n()) %>% 
-    filter(stuff > 4) %>% 
+    filter(stuff > minSale) %>% 
     as.data.frame()
   
   salesOnlyPlus = salesOnly[salesOnly[, subVar] %in% counts[, subVar], ]

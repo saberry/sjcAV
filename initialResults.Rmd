@@ -8,6 +8,8 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, comment = 
 
 library(dplyr)
 
+library(plotly)
+
 load("data/Flat2017Joined.RData")
 
 load("data/tractJoiner.RData")
@@ -59,43 +61,75 @@ With a very basic model, we were able to achieve reasonable values on both COD a
 
 As a next step, we computed individual regressions for each pre-existing neighborhood with at least 5 sales.
 
+Min = 5
 ```{r}
-testFunc(salesOnly, "Neighborhood") %>% 
+testFunc(salesOnly, 5, "Neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+Min = 3
+```{r}
+testFunc(salesOnly, 3, "Neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
 ## School Districts
 
+Min = 5
 ```{r}
-testFunc(salesOnly, "school_district") %>% 
+testFunc(salesOnly, 5, "school_district") %>% 
   knitr::kable(., caption = "School District Results")
 ```
 
+Min = 3
+```{r}
+testFunc(salesOnly, 3, "school_district") %>% 
+  knitr::kable(., caption = "School District Results")
+```
 
 ## Tax Districts
 
+Min = 5
 ```{r}
-testFunc(salesOnly, "tax_district") %>% 
+testFunc(salesOnly, 5, "tax_district") %>% 
+  knitr::kable(., caption = "Tax District Results")
+```
+
+Min = 3
+```{r}
+testFunc(salesOnly, 5, "tax_district") %>% 
   knitr::kable(., caption = "Tax District Results")
 ```
 
 ## Township
 
+Min = 5
 ```{r}
-testFunc(salesOnly, "Township") %>% 
+testFunc(salesOnly, 5, "Township") %>% 
   knitr::kable(., caption = "Township Results")
 ```
 
+Min = 3
+```{r}
+testFunc(salesOnly, 3, "Township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
 
 ## Tract
 
 In an attempt to find an additional way to create neighborhoods, we also used Census Tracts.
 
+Min = 5
 ```{r}
-testFunc(salesOnly, "tract") %>% 
+testFunc(salesOnly, 5, "tract") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
+Min = 3
+```{r}
+testFunc(salesOnly, 3, "tract") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
 
 ## Combined 
 
@@ -103,21 +137,21 @@ After examining individual geographical areas, we made an effort to nest geograp
 
 ### School District & Township
 ```{r}
-testFunc(salesOnly, "school_district", "township") %>% 
+testFunc(salesOnly, 5, "school_district", "township") %>% 
   knitr::kable(., caption = "School District & Township Results")
 ```
 
 ### Township & Tax District
 
 ```{r}
-testFunc(salesOnly, "township", "tax_district") %>% 
+testFunc(salesOnly, 5, "township", "tax_district") %>% 
   knitr::kable(., caption = "Township & Tax District Results")
 ```
 
 ### Tax District & Tract
 
 ```{r}
-testFunc(salesOnly, "tax_district", "tract") %>% 
+testFunc(salesOnly, 5, "tax_district", "tract") %>% 
   knitr::kable(., caption = "Tax District & Tract Results")
 ```
 
@@ -148,18 +182,19 @@ Instead of fitting models to individual groupings, we also tried a mixed model i
 ```{r}
 library(lme4)
 
-testMod = lmer(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1 + (1|tractClusterNumber), data = salesOnly)
+testMod = lmer(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1 + 
+                 (0 + land_AV_preRoll|tractClusterNumber) +
+                 (0 + improvement_AV_preRoll|tractClusterNumber), data = salesOnly)
 
 saleCoef = coef(testMod)
 
 saleCoef = data.frame(tractClusterNumber = rownames(saleCoef$tractClusterNumber), 
-                      intercept = saleCoef$tractClusterNumber$`(Intercept)`,
                       land_AV_preRollMod = saleCoef$tractClusterNumber$land_AV_preRoll, 
                       improvement_AV_preRollMod = saleCoef$tractClusterNumber$improvement_AV_preRoll)
 
 updatedDat = salesOnly %>% 
   left_join(., saleCoef, by = "tractClusterNumber") %>% 
-  mutate(newAssessedValue = (intercept + (land_AV_preRoll * land_AV_preRollMod) + 
+  mutate(newAssessedValue = ((land_AV_preRoll * land_AV_preRollMod) + 
            (improvement_AV_preRoll * improvement_AV_preRollMod)), 
          saleAssessedDiff = `Sale Price` - newAssessedValue, 
          saleAssessedDiffPerc = (`Sale Price` - newAssessedValue) / `Sale Price`, 
@@ -224,3 +259,42 @@ testFunc(salesOnly2013, "neighborhood") %>%
 testFunc(salesOnly2013, "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
+
+
+```{r}
+plotDat = Flat2017 %>%
+  select(land_AV_preRoll, WGS84_lat_deg, WGS84_long_deg, acreage) %>% 
+  mutate(landValue = land_AV_preRoll/acreage, 
+         landValue = ifelse(landValue == Inf, land_AV_preRoll , landValue)) %>% 
+  filter(landValue < 1000000)
+
+plot_geo(data = plotDat, lat = ~WGS84_lat_deg, lon = ~WGS84_long_deg) %>%
+  add_markers() %>%
+  layout(geo = g)
+  plot_ly(x = ~, y = ~WGS84_long_deg, mode = "markers")
+  plot_geo(locationmode = "USA-states", 
+           y = ~WGS84_lat_deg, x = ~WGS84_long_deg) %>%
+  add_markers() 
+```
+
+```{r}
+
+library(ggmap)
+stJoeMap = get_map(location = make_bbox(Flat2017$WGS84_long_deg, 
+                                        Flat2017$WGS84_lat_deg, f = .15), 
+                   maptype = "watercolor", color = "bw")
+
+plotDat = Flat2017 %>%
+  select(land_AV_preRoll, WGS84_lat_deg, WGS84_long_deg, acreage) %>% 
+  mutate(landValue = land_AV_preRoll/acreage, 
+         landValue = ifelse(landValue == Inf, land_AV_preRoll , landValue)) %>% 
+  filter(landValue < 1000000)
+
+ggmap(stJoeMap) +
+  geom_point(data = plotDat, 
+             aes(x = WGS84_long_deg, y = WGS84_lat_deg, 
+                 fill = landValue, 
+                 color = landValue), 
+             alpha = 0.7, size = 1)
+```
+
