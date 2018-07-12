@@ -1,5 +1,9 @@
 testFunc = function(salesOnly, subVar, subVar2 = NULL) {
   
+  library(dplyr)
+  
+  library(purrr)
+  
   if(!(is.null(subVar2))) {
     newName = paste(subVar, subVar2, sep = "_")
     salesOnly[, newName] = paste(salesOnly[, subVar], salesOnly[, subVar2], sep = "_")
@@ -10,11 +14,11 @@ testFunc = function(salesOnly, subVar, subVar2 = NULL) {
   
   counts = salesOnly %>% 
     group_by_at(vars(one_of(subVar))) %>% 
-    summarize(n = n()) %>% 
-    filter(n > 4) %>% 
+    summarize_(stuff = ~n()) %>% 
+    filter(stuff > 4) %>% 
     as.data.frame()
   
-  salesOnlyPlus = salesOnly[salesOnly[, subVar] %in% counts[, subVar], ] %>% 
+  salesOnlyPlus = salesOnly[salesOnly[, subVar] %in% counts[, subVar], ]
     
   
   tractCoefs =  salesOnlyPlus %>% 
@@ -43,23 +47,3 @@ testFunc = function(salesOnly, subVar, subVar2 = NULL) {
   
   # return(trueCODTract)
 }
-
-debugonce(testFunc)
-
-testFunc(salesOnly, "school_district", "tract")
-
-testFunc(salesOnly, "tract", "neighborhood")
-
-
-
-testFunc(salesOnly, "school_district")
-
-testFunc(salesOnly, "tax_district")
-
-testFunc(salesOnly, "Township")
-
-testFunc(salesOnly, "Neighborhood")
-
-
-
-

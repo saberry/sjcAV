@@ -25,6 +25,18 @@ clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 
 Flat2017 = left_join(Flat2017, clusterAssignmentData)
 
+tractJoiner = Flat2017 %>% 
+  select(PARCELSTAT, LRSN, tract)
+
+salesOnly = Flat2017 %>% 
+  filter(!is.na(`Sale Price`))
+
+save(tractJoiner, file = "data/tractJoiner.RData")
+
+save(Flat2017, file = "data/Flat2017Joined.RData")
+
+save(salesOnly, file = "data/salesOnly2017.RData")
+
 saleCoef = Flat2017 %>% 
   filter(!is.na(`Sale Price`)) %>% 
   mutate() %>% 

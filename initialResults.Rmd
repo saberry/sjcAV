@@ -1,0 +1,226 @@
+---
+title: "Initial Results"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, comment = "")
+
+library(dplyr)
+
+load("data/Flat2017Joined.RData")
+
+load("data/tractJoiner.RData")
+
+load("data/salesOnly2017.RData")
+
+load("data/sales2013Data.RData")
+
+load("data/sales2014Data.RData")
+
+load("data/sales2015Data.RData")
+
+load("data/sales2016Data.RData")
+
+source("code/codFunction.R")
+```
+
+# 2017 Sales
+
+## Initial Model
+
+For an initial pass, we construct a model in which valid sales prices were predicted by land and improvement values. The values taken from this baseline model were then used to calculate updated assessed values.
+
+```{r}
+saleCoef = Flat2017 %>% 
+  filter(!is.na(`Sale Price`)) %>% 
+  mutate() %>% 
+  lm(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1, data = .) %>% 
+  coef()
+
+updatedDat = Flat2017 %>% 
+  filter(!is.na(`Sale Price`)) %>% 
+  mutate(newAssessedValue = (land_AV_preRoll * saleCoef["land_AV_preRoll"]) + 
+           (improvement_AV_preRoll * saleCoef["improvement_AV_preRoll"]), 
+         saleAssessedDiff = `Sale Price` - newAssessedValue, 
+         saleAssessedDiffPerc = (`Sale Price` - newAssessedValue) / `Sale Price`, 
+         ratio = newAssessedValue / `Sale Price`, 
+         medianRatio = median(ratio), 
+         dispersion = ratio - medianRatio)
+  
+knitr::kable(rbind(COD = ((100/nrow(updatedDat)) * sum(abs(updatedDat$dispersion))) / updatedDat$medianRatio[1], 
+                   Ratio = mean(updatedDat$medianRatio)), caption = "Base Results")
+
+```
+
+With a very basic model, we were able to achieve reasonable values on both COD and Ratio.
+
+## Existing Neighborhood Results
+
+As a next step, we computed individual regressions for each pre-existing neighborhood with at least 5 sales.
+
+```{r}
+testFunc(salesOnly, "Neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+## School Districts
+
+```{r}
+testFunc(salesOnly, "school_district") %>% 
+  knitr::kable(., caption = "School District Results")
+```
+
+
+## Tax Districts
+
+```{r}
+testFunc(salesOnly, "tax_district") %>% 
+  knitr::kable(., caption = "Tax District Results")
+```
+
+## Township
+
+```{r}
+testFunc(salesOnly, "Township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
+
+
+## Tract
+
+In an attempt to find an additional way to create neighborhoods, we also used Census Tracts.
+
+```{r}
+testFunc(salesOnly, "tract") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
+
+
+## Combined 
+
+After examining individual geographical areas, we made an effort to nest geographical features into two levels.
+
+### School District & Township
+```{r}
+testFunc(salesOnly, "school_district", "township") %>% 
+  knitr::kable(., caption = "School District & Township Results")
+```
+
+### Township & Tax District
+
+```{r}
+testFunc(salesOnly, "township", "tax_district") %>% 
+  knitr::kable(., caption = "Township & Tax District Results")
+```
+
+### Tax District & Tract
+
+```{r}
+testFunc(salesOnly, "tax_district", "tract") %>% 
+  knitr::kable(., caption = "Tax District & Tract Results")
+```
+
+## Clustering
+
+Given the relative performance of tract, an effort was made to break the homes within tract into discreet clusters. The features selected clustering were acreage, year built, finished dwelling area and finished rooms. For each individual school district or tract, 2 distinct clusters were created. 
+
+### School District Clusters
+
+```{r}
+testFunc(salesOnly, "schoolDistrictClusterNumber") %>% 
+  knitr::kable(., caption = "School District Cluster Results")
+```
+
+### Tract Clusters
+
+```{r}
+testFunc(salesOnly, "tractClusterNumber") %>% 
+  knitr::kable(., caption = "Tract Cluster Results")
+```
+
+
+
+## Mixed Models
+
+Instead of fitting models to individual groupings, we also tried a mixed model in which every tract X cluster combination has its own intercept within the model.
+
+```{r}
+library(lme4)
+
+testMod = lmer(`Sale Price` ~ land_AV_preRoll + improvement_AV_preRoll -1 + (1|tractClusterNumber), data = salesOnly)
+
+saleCoef = coef(testMod)
+
+saleCoef = data.frame(tractClusterNumber = rownames(saleCoef$tractClusterNumber), 
+                      intercept = saleCoef$tractClusterNumber$`(Intercept)`,
+                      land_AV_preRollMod = saleCoef$tractClusterNumber$land_AV_preRoll, 
+                      improvement_AV_preRollMod = saleCoef$tractClusterNumber$improvement_AV_preRoll)
+
+updatedDat = salesOnly %>% 
+  left_join(., saleCoef, by = "tractClusterNumber") %>% 
+  mutate(newAssessedValue = (intercept + (land_AV_preRoll * land_AV_preRollMod) + 
+           (improvement_AV_preRoll * improvement_AV_preRollMod)), 
+         saleAssessedDiff = `Sale Price` - newAssessedValue, 
+         saleAssessedDiffPerc = (`Sale Price` - newAssessedValue) / `Sale Price`, 
+         ratio = newAssessedValue / `Sale Price`, 
+         medianRatio = median(ratio, na.rm = TRUE), 
+         dispersion = ratio - medianRatio)
+  
+  knitr::kable(rbind(COD = ((100/nrow(updatedDat)) * sum(abs(updatedDat$dispersion), na.rm = TRUE)) / updatedDat$medianRatio[1], 
+                     Ratio = mean(updatedDat$medianRatio)), caption = "Base Results")
+
+```
+
+
+# Previous Years
+
+Given the reasonable results of the tract X cluster combination, we can see how it performs over the previous years.
+
+## 2016
+
+```{r}
+testFunc(salesOnly2016, "neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+```{r}
+testFunc(salesOnly2016, "tractClusterNumber") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
+
+## 2015
+
+```{r}
+testFunc(salesOnly2015, "neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+```{r}
+testFunc(salesOnly2015, "tractClusterNumber") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
+
+## 2014
+
+```{r}
+testFunc(salesOnly2014, "neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+```{r}
+testFunc(salesOnly2014, "tractClusterNumber") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
+
+## 2013
+
+```{r}
+testFunc(salesOnly2013, "neighborhood") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+```{r}
+testFunc(salesOnly2013, "tractClusterNumber") %>% 
+  knitr::kable(., caption = "Tract Results")
+```
