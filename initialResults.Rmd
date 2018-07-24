@@ -31,7 +31,7 @@ source("code/codFunction.R")
 
 ## Initial Model
 
-For an initial pass, we construct a model in which valid sales prices were predicted by land and improvement values. The values taken from this baseline model were then used to calculate updated assessed values.
+For an initial pass, we constructed a model in which valid sales prices were predicted by land and improvement values. The values taken from this baseline model were then used to calculate updated assessed values.
 
 ```{r}
 saleCoef = Flat2017 %>% 
@@ -62,56 +62,106 @@ With a very basic model, we were able to achieve reasonable values on both COD a
 As a next step, we computed individual regressions for each pre-existing neighborhood with at least 5 sales.
 
 Min = 5
+
 ```{r}
-testFunc(salesOnly, 5, "Neighborhood") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
+
 Min = 3
+
 ```{r}
-testFunc(salesOnly, 3, "Neighborhood") %>% 
+testFunc(salesOnly, Flat2017, 3, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
+
+
+## New Neighborhoods (Individual Distance)
+
+Min = 5
+
+```{r}
+testFunc(salesOnly, Flat2017, 5, type = "full", "new_neighborhood_ind") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+
+Min = 3
+
+```{r}
+testFunc(salesOnly, Flat2017, 3, type = "full", "new_neighborhood_ind") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+
+## New Neighborhoods (Midpoint Distance)
+
+Min = 5
+
+```{r}
+testFunc(salesOnly, Flat2017, 5, type = "full", "new_neighborhood_mid") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+
+Min = 3
+
+```{r}
+testFunc(salesOnly, Flat2017, 3, type = "full", "new_neighborhood_mid") %>% 
+  knitr::kable(., caption = "Neighborhood Results")
+```
+
+
 
 ## School Districts
 
 Min = 5
+
 ```{r}
-testFunc(salesOnly, 5, "school_district") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "school_district") %>% 
   knitr::kable(., caption = "School District Results")
 ```
 
+
 Min = 3
+
 ```{r}
-testFunc(salesOnly, 3, "school_district") %>% 
+testFunc(salesOnly, Flat2017, 3, type = "full", "school_district") %>% 
   knitr::kable(., caption = "School District Results")
 ```
 
 ## Tax Districts
 
 Min = 5
+
 ```{r}
-testFunc(salesOnly, 5, "tax_district") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "tax_district") %>% 
   knitr::kable(., caption = "Tax District Results")
 ```
 
+
 Min = 3
+
 ```{r}
-testFunc(salesOnly, 5, "tax_district") %>% 
+testFunc(salesOnly, Flat2017, 3, type = "full", "tax_district") %>% 
   knitr::kable(., caption = "Tax District Results")
 ```
 
 ## Township
 
 Min = 5
+
 ```{r}
-testFunc(salesOnly, 5, "Township") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "township") %>% 
   knitr::kable(., caption = "Township Results")
 ```
 
+
 Min = 3
+
 ```{r}
-testFunc(salesOnly, 3, "Township") %>% 
+testFunc(salesOnly, Flat2017, 3, type = "full", "township") %>% 
   knitr::kable(., caption = "Township Results")
 ```
 
@@ -120,14 +170,17 @@ testFunc(salesOnly, 3, "Township") %>%
 In an attempt to find an additional way to create neighborhoods, we also used Census Tracts.
 
 Min = 5
+
 ```{r}
-testFunc(salesOnly, 5, "tract") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "tract") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
+
 Min = 3
+
 ```{r}
-testFunc(salesOnly, 3, "tract") %>% 
+testFunc(salesOnly, Flat2017, 3, type = "full", "tract") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
@@ -137,21 +190,21 @@ After examining individual geographical areas, we made an effort to nest geograp
 
 ### School District & Township
 ```{r}
-testFunc(salesOnly, 5, "school_district", "township") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "school_district", "township") %>% 
   knitr::kable(., caption = "School District & Township Results")
 ```
 
 ### Township & Tax District
 
 ```{r}
-testFunc(salesOnly, 5, "township", "tax_district") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "township", "tax_district") %>% 
   knitr::kable(., caption = "Township & Tax District Results")
 ```
 
 ### Tax District & Tract
 
 ```{r}
-testFunc(salesOnly, 5, "tax_district", "tract") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "tax_district", "tract") %>% 
   knitr::kable(., caption = "Tax District & Tract Results")
 ```
 
@@ -162,14 +215,14 @@ Given the relative performance of tract, an effort was made to break the homes w
 ### School District Clusters
 
 ```{r}
-testFunc(salesOnly, "schoolDistrictClusterNumber") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "schoolDistrictClusterNumber") %>% 
   knitr::kable(., caption = "School District Cluster Results")
 ```
 
 ### Tract Clusters
 
 ```{r}
-testFunc(salesOnly, "tractClusterNumber") %>% 
+testFunc(salesOnly, Flat2017, 5, type = "full", "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Cluster Results")
 ```
 
@@ -177,7 +230,7 @@ testFunc(salesOnly, "tractClusterNumber") %>%
 
 ## Mixed Models
 
-Instead of fitting models to individual groupings, we also tried a mixed model in which every tract X cluster combination has its own intercept within the model.
+Instead of fitting models to individual groupings, we also tried a mixed model in which every tract X cluster combination has its own slope within the model.
 
 ```{r}
 library(lme4)
@@ -215,48 +268,68 @@ Given the reasonable results of the tract X cluster combination, we can see how 
 ## 2016
 
 ```{r}
-testFunc(salesOnly2016, "neighborhood") %>% 
+testFunc(salesOnly2016, Flat2016, 5, type = "full", "township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
+
+```{r}
+testFunc(salesOnly2016, Flat2016, 5, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
 ```{r}
-testFunc(salesOnly2016, "tractClusterNumber") %>% 
+testFunc(salesOnly2016, Flat2016, 5, type = "full", "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
 ## 2015
 
 ```{r}
-testFunc(salesOnly2015, "neighborhood") %>% 
+testFunc(salesOnly2015, Flat2015, 5, type = "full", "township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
+
+```{r}
+testFunc(salesOnly2015, Flat2015, 5, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
 ```{r}
-testFunc(salesOnly2015, "tractClusterNumber") %>% 
+testFunc(salesOnly2015, Flat2015, 5, type = "full", "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
 ## 2014
 
 ```{r}
-testFunc(salesOnly2014, "neighborhood") %>% 
+testFunc(salesOnly2014, Flat2014, 5, type = "full", "township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
+
+```{r}
+testFunc(salesOnly2014, Flat2014, 5, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
 ```{r}
-testFunc(salesOnly2014, "tractClusterNumber") %>% 
+testFunc(salesOnly2014, Flat2014, 5, type = "full", "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
 ## 2013
 
 ```{r}
-testFunc(salesOnly2013, "neighborhood") %>% 
+testFunc(salesOnly2013, Flat2013, 5, type = "full", "township") %>% 
+  knitr::kable(., caption = "Township Results")
+```
+
+```{r}
+testFunc(salesOnly2013, Flat2013, 5, type = "full", "neighborhood") %>% 
   knitr::kable(., caption = "Neighborhood Results")
 ```
 
 ```{r}
-testFunc(salesOnly2013, "tractClusterNumber") %>% 
+testFunc(salesOnly2013, Flat2013, 5, type = "full", "tractClusterNumber") %>% 
   knitr::kable(., caption = "Tract Results")
 ```
 
@@ -268,18 +341,19 @@ plotDat = Flat2017 %>%
          landValue = ifelse(landValue == Inf, land_AV_preRoll , landValue)) %>% 
   filter(landValue < 1000000)
 
-plot_geo(data = plotDat, lat = ~WGS84_lat_deg, lon = ~WGS84_long_deg) %>%
-  add_markers() %>%
-  layout(geo = g)
-  plot_ly(x = ~, y = ~WGS84_long_deg, mode = "markers")
-  plot_geo(locationmode = "USA-states", 
-           y = ~WGS84_lat_deg, x = ~WGS84_long_deg) %>%
-  add_markers() 
+# plot_geo(data = plotDat, lat = ~WGS84_lat_deg, lon = ~WGS84_long_deg) %>%
+#   add_markers() %>%
+#   layout(geo = g)
+#   plot_ly(x = ~, y = ~WGS84_long_deg, mode = "markers")
+#   plot_geo(locationmode = "USA-states", 
+#            y = ~WGS84_lat_deg, x = ~WGS84_long_deg) %>%
+#   add_markers() 
 ```
 
-```{r}
+```{r, fig.height=9, fig.width=11, fig.align='center'}
 
 library(ggmap)
+
 stJoeMap = get_map(location = make_bbox(Flat2017$WGS84_long_deg, 
                                         Flat2017$WGS84_lat_deg, f = .15), 
                    maptype = "watercolor", color = "bw")
@@ -288,13 +362,18 @@ plotDat = Flat2017 %>%
   select(land_AV_preRoll, WGS84_lat_deg, WGS84_long_deg, acreage) %>% 
   mutate(landValue = land_AV_preRoll/acreage, 
          landValue = ifelse(landValue == Inf, land_AV_preRoll , landValue)) %>% 
-  filter(landValue < 1000000)
+  filter(landValue < 100000)
 
-ggmap(stJoeMap) +
+test = ggmap(stJoeMap) +
   geom_point(data = plotDat, 
              aes(x = WGS84_long_deg, y = WGS84_lat_deg, 
                  fill = landValue, 
                  color = landValue), 
              alpha = 0.7, size = 1)
+
+test
 ```
 
+![](sjAVPic.PNG)
+
+![](sjAVPic2.PNG)
