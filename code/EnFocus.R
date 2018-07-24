@@ -15,15 +15,30 @@ load("clustering.RData")
 
 load("data/sjcShapeTract.RData")
 
+newAssignments = read.csv("data/newAssignments.csv")
+
+newAssignments = newAssignments %>% 
+  select(-X, -old_neighborhood) %>% 
+  rename(new_neighborhood_mid = new_neighborhood)
+
+newAssignments2 = read.csv("data/New_Neighborhood_Assignments_Individual_Distances.csv")
+
+newAssignments2 = newAssignments2 %>% 
+  select(-X, -old_neighborhood) %>% 
+  rename(new_neighborhood_ind = new_neighborhood)
+
 shapeSmall = sjcShape %>% 
   select(PARCELSTAT, tract)
 
 Flat2017 = left_join(Flat2017, saleData, by = c("PARCELSTAT" = "Parcel Number")) %>% 
   left_join(., shapeSmall, by = "PARCELSTAT")
 
-clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
+# clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 
 Flat2017 = left_join(Flat2017, clusterAssignmentData)
+
+Flat2017 = left_join(Flat2017, newAssignments, by = "LRSN") %>% 
+  left_join(., newAssignments2, by = "LRSN")
 
 tractJoiner = Flat2017 %>% 
   select(PARCELSTAT, LRSN, tract)
