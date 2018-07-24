@@ -31,7 +31,8 @@ shapeSmall = sjcShape %>%
   select(PARCELSTAT, tract)
 
 Flat2017 = left_join(Flat2017, saleData, by = c("PARCELSTAT" = "Parcel Number")) %>% 
-  left_join(., shapeSmall, by = "PARCELSTAT")
+  left_join(., shapeSmall, by = "PARCELSTAT") %>% 
+  dplyr::distinct()
 
 # clusterAssignmentData$grade = as.character(clusterAssignmentData$grade)
 
@@ -39,6 +40,8 @@ Flat2017 = left_join(Flat2017, clusterAssignmentData)
 
 Flat2017 = left_join(Flat2017, newAssignments, by = "LRSN") %>% 
   left_join(., newAssignments2, by = "LRSN")
+
+Flat2017 = Flat2017[!(duplicated(Flat2017$PARCELSTAT)), ]
 
 tractJoiner = Flat2017 %>% 
   select(PARCELSTAT, LRSN, tract)
